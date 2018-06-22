@@ -2,10 +2,10 @@
 ------------
 Table of Contents
 * [TODOS](#todos)
-* [Future Schedule] (#future-schedule)
-* [Weekly Notes] (#weekly-notes)
-   * [Week 4] (#week-4)
-* [Work Log]
+* [Future Schedule](#future-schedule)
+* [Weekly Notes](#weekly-notes)
+   * [Week 4](#week-4)
+* [Work Log](#work-log)
 
 ------------
 # TODOS
