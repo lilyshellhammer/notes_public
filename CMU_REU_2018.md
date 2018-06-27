@@ -10,15 +10,17 @@ Table of Contents
 ------------
 # TODOS
 - This Week:
-  - [ ] Finish SDF on Python
-  - [ ] Learn more about SVG and define our shapes in terms of SVG spec
-  - [ ] Trace BBox code for labels
-- Future:
-  - [ ] Figure out how to implement FSM in Haskell
+  - [ ] Finish Level Sets in Haskell
+  - [ ] Add BVH tree from Level Set in Haskell (define leaf size, create tree, store bbox values)
   - [ ] Figure out how to split up BVH on Level Set (clever or just plain in half)
-  - [ ] Design functions (notIntersect, distanceNoCloserThan, distanceNoFartherThan, allEquidistant)
+  - [ ] Implement ^ on contains for two circles
+  Future
+  - [ ] Generalize the boundary finding function
+  - [ ] Implement other functions (notIntersect, distanceNoCloserThan, distanceNoFartherThan, allEquidistant)
   - [ ] Generate diagrams with good labels
   - [ ] Learn more about curves and figure out optimization techniques
+  - [ ] Find Student Research Comp
+  - [ ] Poster - August 3rd
   
 ----------
 # Future Schedule
@@ -43,3 +45,10 @@ Week 2
 Week 3
   - [x] [Write blog post on SDF/Level Sets](http://brickisland.net/diagrams/2018/06/17/methods-to-find-distance-between-arbitrary-shapes-in-penrose-a-comparison-of-fast-methods-for-solving-the-eikonal-equation/)
   - [x] First part Design Doc
+Week 4
+ - [x] PLDI
+ - [x] Summer Plans write out
+ - [x] Learn more about SVG and define our shapes in terms of SVG spec
+Week 5
+  - [x] Get SDF working in Python
+  - [x] Get something SDF looking implemented in Haskell
