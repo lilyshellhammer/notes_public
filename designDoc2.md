@@ -24,10 +24,12 @@ Many of these things we were doing were not only inefficient and should be repla
         - Confirmed overlap or lack there of at Leaf node bounding boxes
         - (In some simplified form yet to be determined) whether one object has any area outside of another shape (similar to  `contains` level set version.. final form of `contains` tbd)
 - Not recalculate the size of above grid or of the generated BVH. 
-   - This was a big oversight on our part. We were stucking thinking about the system on a grid layout, when the grid is just a discrete representation of a continuous function. It makes it possible to store this continuous function in an intelligible, easy to compute manor. We can still use a grid but are no longer mentally limited by alignment issues. 
-   - Translating, scalinging, or even squishing along an axis will only manipulate bounding box points. We don't need bounding boxes to be the exact same size as they are just 
+   - This was a big oversight on Nimo and I's part. We were stucking thinking about the system on a grid layout, when the grid is just a discrete representation of a continuous function. It makes it possible to store this continuous function in an intelligible, easy to compute manor. We can still use a grid but are no longer mentally limited by alignment issues. 
+   - Translating, scalinging, or even squishing along an axis will only manipulate bounding box points. We don't need bounding boxes to be the exact same size as they are just boundary estimations.
    
    
 ## PseudoCode
 
 ### Overlaps Function
+- Generate boundary inside/outside grid, can be coarse ***
+     *** If we need to check exact distance 
