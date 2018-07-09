@@ -232,11 +232,10 @@ containsLevelSet(grid, rows, cols, outershape){
 ```
 
 ## Tangency
-See [Closest Distance](#closest-distance) for background as to how we are solving this problem.
-Assuming we have a black box 
+See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. 
 ## Closest Distance
 First, I'll explain the naive method I came up with. I'm not sure how inefficient it is, but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
-In this method, we compare the children of both objects with the goal of finding two overlapping leaf nodes (possibel distance 0) or the two closest leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
+In this method, we compare the children of both objects with the goal of finding two overlapping leaf nodes (possible distance 0) or the two closest leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
 We know the maximum possible distance from a point to a bbox is the distance to the 2nd closest corner: PICTURE
 
 Pseudocode
@@ -244,8 +243,9 @@ Pseudocode
 findClosestBBoxes(node a, node b){
   if both not leaves
     compare max dist with min dist between all four nodes
-    if any nodes have a max distance LESS than a min dist
-      
+    if any nodes have a max distance LESS than any others minimum distance
+      ignore traversing that tree, only focus on the latter child
+     
 }
 ```
 
