@@ -9,6 +9,8 @@ Write pseudocode for an (efficient and correct) algorithm that answers each of t
 ## Overview
 In this document, I summarize methods for checking area intersection, boundary intersection, containment, tangency, and closest distance using (mainly) BVHs. The two methods I write up that do not deal specifically with BVH's are the polygon containment test and the level set containment test. 
 Previously, we calculated a discrete representation for the boundary at the beginning of our optimization and recalculated the level set and the BVH at every step. The new methods (other than the level set containment test) don't require a level set (the black box solution to the overlapping/containing/distanceTo nodes *may*, but not BVH traversal) and don't need recalculation of the boundary or the BVH unless the object is rotated. The BVH can be scaled and rotated.
+
+### BVH Calculation
 In every example, the main BVH's are calculated as such:
 Pseudocode
 ```
@@ -56,7 +58,7 @@ void bvhCreator(node n, grid g, int xmin, int ymin, int xmax, int ymax, int iter
 }
 ```
 
-### Area Intersection
+## Area Intersection
 If A and B intersect, leaf nodes of their bounding volume hierarchy intersect. We iterate through the trees as follows:
 Compare A and B's bounding boxes. If they overlap, compare every permutation of pairs of their childrens bounding boxes. If two children don't overlap, ignore the rest of that those children's children nodes. If the children do overlap continue to iterate until two leaf nodes that overlap are found. If no leaf nodes overlap, the funciton will return false. If any overlapping nodes are found, the function returns true. 
 Pseudocode
@@ -102,7 +104,7 @@ Cases for return value:
 
 Runtime *****?
   
-### Boundary Intersection
+## Boundary Intersection
 If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries.
 Pseudocode
 ```
@@ -119,13 +121,13 @@ findIntersection (Node a, Node b) //top level function call will return true if 
   if dont overlap, return false
 ```
 
-### Containment
+## Containment
 Here I present three possible solutions. Part 1 is about a method of BVH traversal I came up with for checking containment.
 The second and third parts are the polygon containment test and the level set containment tests described in Keenan's blog post. 
-### Part 1: Negative space BVH traversal
+## Part 1: Negative space BVH traversal
 This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. The rationale for this method is that if shape A is NOT contained in shape B, there will be a part of A that overlaps with the negative space of B. 
 In this solution, I create a BVH surrounding the whitespace of the first bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the Node b that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). 
-### Part 2: Polygon Containment
+## Part 2: Polygon Containment
 Using bezier paths created by the front end, we can plot points that create a polygon containment of a bezier curve. If the polygon containment of one shape has at least one point inside a shape and the polygon's edges never pass across the containing shape's edges, the shape is contained. 
 The bezier curve control points will *******?* be defined in order so connecting lines between them to envelop the shape will be simple. 
 Pseudocode
@@ -147,7 +149,7 @@ insidePolygon(A, B){
  
 }
 ```
-### Part 3: Level Set Containment
+## Part 3: Level Set Containment
 Pseudocode
 ```
 findBoundary(picture){
