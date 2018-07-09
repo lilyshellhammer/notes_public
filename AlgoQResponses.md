@@ -132,9 +132,18 @@ Using bezier paths created by the front end, we can plot points that create a po
 The bezier curve control points will *******?* be defined in order so connecting lines between them to envelop the shape will be simple. 
 Pseudocode
 ```
-ptInsidePolygon(point coordinates, B){
-  if(!ptInsidePolygon(A.point, B))
-    return false
+```
+
+```
+constructPolygon(svg file, position){
+  points = parseSVG(file); // we will need to present points in a way that makes it easy to create
+                              // all the edges of a polygon like below
+  vector of edges;
+  for(i = 0; i < points-1; i++)
+    edges.append( createEdge(points[i], points[i+1]));
+  
+}
+bool ptInsidePolygon(x,y , B){
   rayLine = (x,y) + t(1,-1)         //(1,-1) is a random ray direction
   for e in B.edges
     if intersects(rayLine, e)
@@ -145,8 +154,19 @@ ptInsidePolygon(point coordinates, B){
     return true
 }
 
-insidePolygon(A, B){
- 
+bool intersect(edge, edge2){
+  solve for places where edge == edge2
+  if outside of edge's points
+    return false
+  else return true //there is an intersection of lines that make up polygon edges on the polygon border
+}
+
+bool insidePolygon(A, B){
+ if !ptInsidePolygon(A.point, B)
+    return false
+ for e in A.edges
+  for f in B.edges
+    if !intersect(e,f)
 }
 ```
 ## Part 3: Level Set Containment
@@ -174,3 +194,8 @@ containsLevelSet(grid, rows, cols, outershape){
   return true
 }
 ```
+
+## Tangency
+See [Shortest Distance To](#shortest-distance-to) for background as to how we are solving this problem.
+Assuming we have a black box 
+## Shortest Distance To
