@@ -100,36 +100,75 @@ Cases for return value:
   If the two levels overlap and they have children, recurse through the children. Return true if any of teh child calls return true.
   If two leafs overlap, true will be returned.
 
-Runtime
+Runtime *****?
   
 ### Boundary Intersection
 If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries.
-```C++
-findIntersection(Node a, Node b){
-  if(isLeaf(a) && isLeaf(b)){
-    if (isBoundaryNode(a) && isBoundaryNode(b) && overlaps(a.bbox, b.bbox)) return true  //this is where we would use the                                                                                           checkSmallestBBoxOverlap blackbox
-         else return false;
-  }
-  if(overlaps(a.bbox, b.bbox){
-    if(hasTwoChildren(a), hasTwoChildren(b))
-        return( findIntersection(a.right, b.right) ||
-                findIntersection(a.left, b.right ) ||
-                findIntersection(a.right, b.left ) ||
-                findIntersection(a.left, b.left )) ); //if there is one of children returns true, return true      
-    else if(isLeaf(a), !isLeaf(b)) //if a is leaf but b isn't
-        return( findIntersection(a.right, b) ||
-                findIntersection(a.left, b ) );
-    else if(!isLeaf(a), isLeaf(b)) //if b is leaf but a isn't
-        return( findIntersection(a, b.right) ||
-                findIntersection(a, b.left ) );
-  } else return false;
-}
+Pseudocode
+```
+findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
+  if they are both leaves
+      check overlap, if it works return true
+  if nodes overlap
+    if check if both have children
+         // return true if any of the children findOverlap calls returns true:
+         return findOverlap(one's children, other's children)
+    if only one has children
+        // return true if any of the children findOverlap calls returns true:
+       return findOverlap(one's children, other node)
+  if dont overlap, return false
 ```
 
 ### Containment
 Here I present three possible solutions. Part 1 is about a method of BVH traversal I came up with for checking containment.
 The second and third parts are the polygon containment test and the level set containment tests described in Keenan's blog post. 
 ### Part 1: Negative space BVH traversal
-This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. 
+This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. The rationale for this method is that if shape A is NOT contained in shape B, there will be a part of A that overlaps with the negative space of B. 
+In this solution, I create a BVH surrounding the whitespace of the first bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the Node b that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). 
 ### Part 2: Polygon Containment
+Using bezier paths created by the front end, we can plot points that create a polygon containment of a bezier curve. If the polygon containment of one shape has at least one point inside a shape and the polygon's edges never pass across the containing shape's edges, the shape is contained. 
+The bezier curve control points will *******?* be defined in order so connecting lines between them to envelop the shape will be simple. 
+Pseudocode
+```
+ptInsidePolygon(point coordinates, B){
+  if(!ptInsidePolygon(A.point, B))
+    return false
+  rayLine = (x,y) + t(1,-1)         //(1,-1) is a random ray direction
+  for e in B.edges
+    if intersects(rayLine, e)
+      count++;
+  if (count % 2 == 0)
+    return false
+  else
+    return true
+}
+
+insidePolygon(A, B){
+ 
+}
+```
 ### Part 3: Level Set Containment
+Pseudocode
+```
+findBoundary(picture){
+  find size of picture, rows, cols
+  create 2d int array
+  //save 0s positions
+  for x in rows
+    for y in cols
+      if arr[x][y] == black, set arr[x][y] to 0
+      else set to 1.
+  OR
+  //save 0 positons in a 1d array
+  for x in rows
+    for y in cols
+      if arr[x][y] == black, save in next index in arr
+}
+
+containsLevelSet(grid, rows, cols, outershape){
+  for x in all black pixels
+    if !ptInsidePolygon(x coordinates, outershape)
+        return false
+  return true
+}
+```
