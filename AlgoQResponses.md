@@ -3,8 +3,8 @@ Write pseudocode for an (efficient and correct) algorithm that answers each of t
 1. [Do A and B intersect, and where?](#area-intersection)
 2. [Do the boundaries of A and B intersect, and where?](#boundary-intersection)
 3. [Does A contain B?](#containment)
-4. How close are A and B to being tangent, and at what pair of points?
-5. What is point on B closest to any point on A?
+4. [How close are A and B to being tangent, and at what pair of points?](#tangency)
+5. [What is point on B closest to any point on A?](#closest-distance)
 
 ## Overview
 In this document, I summarize methods for checking area intersection, boundary intersection, containment, tangency, and closest distance using (mainly) BVHs. The two methods I write up that do not deal specifically with BVH's are the polygon containment test and the level set containment test. 
@@ -14,15 +14,21 @@ Previously, we calculated a discrete representation for the boundary at the begi
 In every example, the main BVH's are calculated as such:
 Pseudocode
 ```
-bvhCreator (node, size of bbox)
-  create bbox
+createBBoxNew(grid, xmin, ymin, xmax, ymax)
+loop over grid between mins and maxes
+  find new max and min x and y 0's or negative numbers //makes a bounding box tight around the shape within the passed
+                                                  //in coordinates
+  return bbox
+  
+bvhCreator (node, grid, position of bbox, iter)
+  createBBoxNew(grid, position of bbox)
   increase iter (determines X or Y split)
   if the leaf nodes would be smaller than what is allowed
     set as leaf Node
-  else if iter == even (X split)
+  else if iter == even // X split
     set current node as not a leaf node
     call bvhCreator on the right and left, dividing the bbox in half along X axis
-  else if iter == odd (Y split)
+  else if iter == odd // Y split
     set current node as not a leaf node
     call bvhCreator on the right (bottom) and left (top), dividing the bbox in half along Y axis
     
@@ -65,7 +71,7 @@ Pseudocode
 ```
 findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
   if they are both leaves
-      check overlap, if it works return true
+      check overlap, if they do return true
   if nodes overlap
     if check if both have children
          // return true if any of the children findOverlap calls returns true:
@@ -73,7 +79,7 @@ findIntersection (Node a, Node b) //top level function call will return true if 
     if only one has children
         // return true if any of the children findOverlap calls returns true:
        return findOverlap(one's children, other node)
-  if dont overlap, return false
+  else no overlap so return false
 ```
 Close-to-real code
 ```C++
@@ -108,8 +114,30 @@ Runtime *****?
 If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries.
 Pseudocode
 ```
-findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
-  if they are both leaves
+createBBoxNew(grid, xmin, ymin, xmax, ymax)
+loop over grid between mins and maxes
+  find new max and min x and y coords for 0's or negative numbers // makes a bounding box tight around the 
+                                                                  // shape within the passed in coordinates
+  if there is a 0 anywhere in the grid
+    mark bbox as a boundary bbox
+  return bbox
+  
+
+bvhCreatorNew(node, grid, position of bbox, iter)
+  bbox = createBBoxNew (size)
+  increase iter (determines X or Y split)
+  if the leaf nodes would be smaller than what is allowed
+    set as leaf Node
+  else if iter == even // X split
+    set current node as not a leaf node
+    call bvhCreator on the right and left, dividing the bbox in half along X axis
+  else if iter == odd // Y split
+    set current node as not a leaf node
+    call bvhCreator on the right (bottom) and left (top), dividing the bbox in half along Y axis
+    
+
+findIntersectionNew (Node a, Node b) //top level function call will return true if any leaf nodes overlap
+  if they are both leaves AND leaf nodes are boundary containing cells
       check overlap, if it works return true
   if nodes overlap
     if check if both have children
@@ -126,25 +154,33 @@ Here I present three possible solutions. Part 1 is about a method of BVH travers
 The second and third parts are the polygon containment test and the level set containment tests described in Keenan's blog post. 
 ## Part 1: Negative space BVH traversal
 This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. The rationale for this method is that if shape A is NOT contained in shape B, there will be a part of A that overlaps with the negative space of B. 
-In this solution, I create a BVH surrounding the whitespace of the first bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the Node b that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). 
+In this solution, I create a BVH surrounding the whitespace of the first bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the Node b that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). The good thing about this method is taht 
+
+```
+createBBoxNegatives(grid, xmin, ymin, xmax, ymax)
+loop over grid between mins and maxes
+  find new max and min x and y coords for POSITIVE numbers // makes a bounding box tight around the whitespace around
+                                                           // a shape within the passed in coordinates
+  return bbox
+```
+
 ## Part 2: Polygon Containment
 Using bezier paths created by the front end, we can plot points that create a polygon containment of a bezier curve. If the polygon containment of one shape has at least one point inside a shape and the polygon's edges never pass across the containing shape's edges, the shape is contained. 
 The bezier curve control points will *******?* be defined in order so connecting lines between them to envelop the shape will be simple. 
 Pseudocode
 ```
-```
-
-```
 constructPolygon(svg file, position){
-  points = parseSVG(file); // we will need to present points in a way that makes it easy to create
-                              // all the edges of a polygon like below
-  vector of edges;
-  for(i = 0; i < points-1; i++)
-    edges.append( createEdge(points[i], points[i+1]));
-  
+  points = parseSVG(file); // This could be complicated, *******
+                           // we will need to present points in a way that makes it easy to create
+                           // all the edges of a polygon like below
+  polygon p
+  for i in points
+    add to p edges( createEdge(points[i], points[i+1]));
+   return p;
 }
+
 bool ptInsidePolygon(x,y , B){
-  rayLine = (x,y) + t(1,-1)         //(1,-1) is a random ray direction
+  rayLine = (x,y) + t*d         //d is a random ray direction
   for e in B.edges
     if intersects(rayLine, e)
       count++;
@@ -156,7 +192,7 @@ bool ptInsidePolygon(x,y , B){
 
 bool intersect(edge, edge2){
   solve for places where edge == edge2
-  if outside of edge's points
+  if outside of edge's start and end points
     return false
   else return true //there is an intersection of lines that make up polygon edges on the polygon border
 }
@@ -196,6 +232,22 @@ containsLevelSet(grid, rows, cols, outershape){
 ```
 
 ## Tangency
-See [Shortest Distance To](#shortest-distance-to) for background as to how we are solving this problem.
+See [Closest Distance](#closest-distance) for background as to how we are solving this problem.
 Assuming we have a black box 
-## Shortest Distance To
+## Closest Distance
+First, I'll explain the naive method I came up with. I'm not sure how inefficient it is, but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
+In this method, we compare the children of both objects with the goal of finding two overlapping leaf nodes (possibel distance 0) or the two closest leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
+We know the maximum possible distance from a point to a bbox is the distance to the 2nd closest corner: PICTURE
+
+Pseudocode
+```
+findClosestBBoxes(node a, node b){
+  if both not leaves
+    compare max dist with min dist between all four nodes
+    if any nodes have a max distance LESS than a min dist
+      
+}
+```
+
+# Questions before send
+- Should I even iterate deeper over bboxes that are ALL area? Picture example. Doesn't make sense to go deeper for space/time/logic reasons, but maybe I'm wrong.
