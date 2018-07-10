@@ -71,17 +71,22 @@ If A and B intersect, leaf nodes of their bounding volume hierarchy intersect. W
 Compare A and B's bounding boxes. If they overlap, compare every permutation of pairs of their childrens bounding boxes. If two children don't overlap, ignore the rest of that those children's children nodes. If the children do overlap continue to iterate until two leaf nodes that overlap are found. If no leaf nodes overlap, the funciton will return false. If any overlapping nodes are found, the function returns true. 
 Pseudocode
 ```
-coord* findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
+bool overlap(bbox a, bbox b) //if 
+  return (a.right < b.left || a.left > b.right || a.top < b.bottom || a.bottom > b.top)
+
+coord* findIntersection (Node a, Node b) //top level function call will return true if any leaf 
+ 					nodes overlap
   if nodes overlap
     if they are both leaves
           call BLACKBOX, return coords
     if both have children
-         if any calls to findIntersection(one's children, other's children) return a list of valid bbox
-            append all valid coords together and return
+         if any calls to findIntersection(one's children, other's children) return a list of coord
+            append all valid coords together and return list
     if only one has children
         if any calls to findIntersection(one's children, other node) return a list of valid bbox
-            append all valid coords together and return
-  else no overlap so return false
+            append all valid coords together and return list
+  else no overlap so return []
+
 ```
 Close-to-real code
 ```C++
