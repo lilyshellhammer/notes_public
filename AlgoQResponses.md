@@ -71,23 +71,27 @@ If A and B intersect, leaf nodes of their bounding volume hierarchy intersect. W
 Compare A and B's bounding boxes. If they overlap, compare every permutation of pairs of their childrens bounding boxes. If two children don't overlap, ignore the rest of that those children's children nodes. If the children do overlap continue to iterate until two leaf nodes that overlap are found. If no leaf nodes overlap, the funciton will return false. If any overlapping nodes are found, the function returns true. 
 Pseudocode
 ```
-findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
-  if they are both leaves
-      check overlap, if they do return true
+coord* findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
   if nodes overlap
-    if check if both have children
-         // return true if any of the children findOverlap calls returns true:
-         return findOverlap(one's children, other's children)
+    if they are both leaves
+          call BLACKBOX, return coords
+    if both have children
+         if any calls to findIntersection(one's children, other's children) return a list of valid bbox
+            append all valid coords together and return
     if only one has children
-        // return true if any of the children findOverlap calls returns true:
-       return findOverlap(one's children, other node)
+        if any calls to findIntersection(one's children, other node) return a list of valid bbox
+            append all valid coords together and return
   else no overlap so return false
 ```
 Close-to-real code
 ```C++
+
 bool findIntersection(Node a, Node b){
   if(isLeaf(a) && isLeaf(b)){
-    if (overlaps(a.bbox, b.bbox)) return true  //this is where we would use the checkSmallestBBoxOverlap blackbox
+    if (overlaps(a.bbox, b.bbox)){
+      CALL BLACKBOX
+      return true  //this is where we would use the checkSmallestBBoxOverlap blackbox
+    }
     else return false;
   }
   if(overlaps(a.bbox, b.bbox){
@@ -105,12 +109,6 @@ bool findIntersection(Node a, Node b){
   } else return false;
 }
 ```
-Cases for return value:
-  If two levels of the tree don't overlap, return false for those two nodes comparison. Upon returning true, the parent call will evaluate these levels along with any other children nodes the parent had. If any of the children have returned true, the parent will return true.
-  If the two levels overlap and they have children, recurse through the children. Return true if any of teh child calls return true.
-  If two leafs overlap, true will be returned.
-
-Runtime *****?
   
 ## Boundary Intersection
 If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. This will be helpful for closest distance and tangency [later in teh document](#tangency). When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries. 
