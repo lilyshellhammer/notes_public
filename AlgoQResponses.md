@@ -63,6 +63,8 @@ void bvhCreator(node n, grid g, int xmin, int ymin, int xmax, int ymax, int iter
     bvhCreator(n.right, g, xmin, xmax, ymax - (ymax-ymin)/2, ymax, iter);
 }
 ```
+Time Complexity
+O(logn)
 
 ## Area Intersection
 If A and B intersect, leaf nodes of their bounding volume hierarchy intersect. We iterate through the trees as follows:
@@ -111,7 +113,7 @@ Cases for return value:
 Runtime *****?
   
 ## Boundary Intersection
-If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries.
+If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. This will be helpful for closest distance and tangency [later in teh document](#tangency). When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries. 
 Pseudocode
 ```
 createBBoxNew(grid, xmin, ymin, xmax, ymax)
@@ -206,6 +208,8 @@ bool insidePolygon(A, B){
 }
 ```
 ## Part 3: Level Set Containment
+We have written about this a lot so I will give a summary and link to [other](https://docs.google.com/document/d/11fBrgEjwB_BAE1aItIxaY2eCK6nugDDjY1Cu4eygFVI/edit#heading=h.clnnojafen2w) [documents](http://brickisland.net/diagrams/2018/06/17/methods-to-find-distance-between-arbitrary-shapes-in-penrose-a-comparison-of-fast-methods-for-solving-the-eikonal-equation/). 
+Level sets are discrete representations of the eikonal equation for an implicit surface. The reason to use them is to easily work with this continuous function in a grid structure. The grid shows us how close to the surface we are at every cell in the grid and we can interpolate the cell's values to find the distance to the surface at points between cell centers. The level set also gives us the gradient, so we know not only how close to the surface we are, but also the direction of steepest descent (toward the surface). We can use level sets to tell us whether one shape is inside another (at every boundary or inside cell, aka <= 0 value, these cells overlap with boundary or inside values for the larger shape), and if not, the gradient direction in which to move the area that is not contained:
 Pseudocode
 ```
 findBoundary(picture){
@@ -232,17 +236,20 @@ containsLevelSet(grid, rows, cols, outershape){
 ```
 
 ## Tangency
-See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. 
+See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. Closest distance gives us a value for how close two objects are regardless of position but if we use these two functions in tandem I can see issues with enforcing tangency. Because closest distance returns more than one bboxes it could be expensive finding the closest point and if you have multiple equidistant points, which direction do you move an object toward? PICTURE We could pick a closest point and move toward it as the system is only looking for local minima not global minima. 
 ## Closest Distance
-First, I'll explain the naive method I came up with. I'm not sure how inefficient it is, but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
-In this method, we compare the children of both objects with the goal of finding two overlapping leaf nodes (possible distance 0) or the two closest leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
+First, I'll explain the naive method I came up with. I'm not sure how inefficient it is. It reduces the number of leaf nodes we are looking at but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
+In this method, we compare the children of both objects with the goal of finding two overlapping **boundary-containing** leaf nodes (possible distance 0) or the two closest **boundary-containing** leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
 We know the maximum possible distance from a point to a bbox is the distance to the 2nd closest corner: PICTURE
+We can utilize this to find the maximum distance between two boxes by comparing distance from corners: PICTURE
+If the minimum distance of one child is greater than the max distance of another child, we ignore the first child because it isn't possible for the closest point to be in that bbox. 
 
 Pseudocode
 ```
 findClosestBBoxes(node a, node b){
   if both not leaves
-    compare max dist with min dist between all four nodes
+    compare maxdist(a.right, b.right) to mindist (a.left, b.right)
+    
     if any nodes have a max distance LESS than any others minimum distance
       ignore traversing that tree, only focus on the latter child
      
@@ -251,3 +258,5 @@ findClosestBBoxes(node a, node b){
 
 # Questions before send
 - Should I even iterate deeper over bboxes that are ALL area? Picture example. Doesn't make sense to go deeper for space/time/logic reasons, but maybe I'm wrong.
+- Time complexity of the searching
+- Writing out steps for svg parsing
