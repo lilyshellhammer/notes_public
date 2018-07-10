@@ -156,7 +156,7 @@ Here I present three possible solutions. Part 1 is about a method of BVH travers
 The second and third parts are the polygon containment test and the level set containment tests described in Keenan's blog post. 
 ## Part 1: Negative space BVH traversal
 This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. The rationale for this method is that if shape A is NOT contained in shape B, there will be a part of A that overlaps with the negative space of B. 
-In this solution, I create a BVH surrounding the whitespace of the first bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the Node b that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). The good thing about this method is taht 
+In this solution, I create a BVH surrounding the whitespace of the outermost bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the BVH (Node b) that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). The good thing about this method is that we can use similar BVH traversal as area and boundary intersection and the black box solution for two overlapping leaf nodes will be similar. 
 
 ```
 createBBoxNegatives(grid, xmin, ymin, xmax, ymax)
@@ -168,7 +168,8 @@ loop over grid between mins and maxes
 
 ## Part 2: Polygon Containment
 Using bezier paths created by the front end, we can plot points that create a polygon containment of a bezier curve. If the polygon containment of one shape has at least one point inside a shape and the polygon's edges never pass across the containing shape's edges, the shape is contained. 
-The bezier curve control points will *******?* be defined in order so connecting lines between them to envelop the shape will be simple. 
+****** This could present a challenge as parsing bezier curves to get an enveloping shape could be tricky. I need to read more into it and see how time consuming this will be. 
+
 Pseudocode
 ```
 constructPolygon(svg file, position){
@@ -182,21 +183,21 @@ constructPolygon(svg file, position){
 }
 
 bool ptInsidePolygon(x,y , B){
-  rayLine = (x,y) + t*d         //d is a random ray direction
+  rayLine = (x,y) + t*d         // d is a random ray direction
   for e in B.edges
-    if intersects(rayLine, e)
+    if intersects(rayLine, e)   // count the amount of intersections 
       count++;
   if (count % 2 == 0)
-    return false
+    return false    // if hit an even number of edges, we are not inside the object
   else
-    return true
+    return true     // else we are contained
 }
 
 bool intersect(edge, edge2){
   solve for places where edge == edge2
   if outside of edge's start and end points
     return false
-  else return true //there is an intersection of lines that make up polygon edges on the polygon border
+  else return true    // there is an intersection of lines that make up polygon edges on the polygon border
 }
 
 bool insidePolygon(A, B){
@@ -204,11 +205,14 @@ bool insidePolygon(A, B){
     return false
  for e in A.edges
   for f in B.edges
-    if !intersect(e,f)
+    if !intersect(e,f)  // check intersection of every edge in the contained polygon against the other polygon edges
 }
 ```
+
+Runtime???
+
 ## Part 3: Level Set Containment
-We have written about this a lot so I will give a summary and link to [other](https://docs.google.com/document/d/11fBrgEjwB_BAE1aItIxaY2eCK6nugDDjY1Cu4eygFVI/edit#heading=h.clnnojafen2w) [documents](http://brickisland.net/diagrams/2018/06/17/methods-to-find-distance-between-arbitrary-shapes-in-penrose-a-comparison-of-fast-methods-for-solving-the-eikonal-equation/). 
+We have written about this a lot so I will give a summary and link to [other documents](https://docs.google.com/document/d/11fBrgEjwB_BAE1aItIxaY2eCK6nugDDjY1Cu4eygFVI/edit#heading=h.clnnojafen2w). 
 Level sets are discrete representations of the eikonal equation for an implicit surface. The reason to use them is to easily work with this continuous function in a grid structure. The grid shows us how close to the surface we are at every cell in the grid and we can interpolate the cell's values to find the distance to the surface at points between cell centers. The level set also gives us the gradient, so we know not only how close to the surface we are, but also the direction of steepest descent (toward the surface). We can use level sets to tell us whether one shape is inside another (at every boundary or inside cell, aka <= 0 value, these cells overlap with boundary or inside values for the larger shape), and if not, the gradient direction in which to move the area that is not contained:
 Pseudocode
 ```
@@ -234,9 +238,23 @@ containsLevelSet(grid, rows, cols, outershape){
   return true
 }
 ```
+If we want to move a shape inside another shape if part of the first shape's area is not contained, we could use [fast sweeping or fast marching](http://brickisland.net/diagrams/2018/06/17/methods-to-find-distance-between-arbitrary-shapes-in-penrose-a-comparison-of-fast-methods-for-solving-the-eikonal-equation/). 
+There is another way of moving objects closer that could be considered slightly hacky, but does the job well enough
+*** DO i include this if it isn't about BVH?
 
 ## Tangency
-See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. Closest distance gives us a value for how close two objects are regardless of position but if we use these two functions in tandem I can see issues with enforcing tangency. Because closest distance returns more than one bboxes it could be expensive finding the closest point and if you have multiple equidistant points, which direction do you move an object toward? PICTURE We could pick a closest point and move toward it as the system is only looking for local minima not global minima. 
+See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. Closest distance gives us a value for how close two objects are regardless of position but if we use these two functions in tandem I can see issues with enforcing tangency. Because closest distance returns more than one bboxes it could be expensive finding the closest point and if you have multiple equidistant points, which direction do you move an object toward? We can also force objects to overlap using [area intersection](#area-intersection) and then move the shapes to only be touching in one spot and rotated so the slopes at the points that are touching are equal. Without the black box method for how we will solve tangency between two leaf nodes I don't know which solution is best.
+
+```
+findTangency (a, b)
+  if they intersect 
+    intersect place = intersects(a.bvh, b.bvh) 
+    call black box tangency solver between the overlapping nodes
+    
+// What to do when there are multiple overlapping leaf nodes? Choose one and find a local minima? 
+```
+
+
 ## Closest Distance
 First, I'll explain the naive method I came up with. I'm not sure how inefficient it is. It reduces the number of leaf nodes we are looking at but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
 In this method, we compare the children of both objects with the goal of finding two overlapping **boundary-containing** leaf nodes (possible distance 0) or the two closest **boundary-containing** leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
@@ -260,3 +278,4 @@ findClosestBBoxes(node a, node b){
 - Should I even iterate deeper over bboxes that are ALL area? Picture example. Doesn't make sense to go deeper for space/time/logic reasons, but maybe I'm wrong.
 - Time complexity of the searching
 - Writing out steps for svg parsing
+- Do I include hacky method for local level sets?
