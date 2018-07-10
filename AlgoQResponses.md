@@ -67,30 +67,31 @@ Time Complexity
 O(logn)
 
 ## Area Intersection
-If A and B intersect, leaf nodes of their bounding volume hierarchy intersect. We iterate through the trees as follows:
-Compare A and B's bounding boxes. If they overlap, compare every permutation of pairs of their childrens bounding boxes. If two children don't overlap, ignore the rest of that those children's children nodes. If the children do overlap continue to iterate until two leaf nodes that overlap are found. If no leaf nodes overlap, the funciton will return false. If any overlapping nodes are found, the function returns true. 
+If A and B shapes intersect, there exists some area of both that overlap. Since all area in a shape is contained within at least one leaf node bounding box, that means the leaves containing the overlapping area are at least overlapping. If no leaf nodes intersect, this contradicts what we know about how bboxes and BVH are built.
+In this function we want to know two things. Does area intersection happen and at which places? In this case I am returning just the bboxes where this happens as a list of coordinates where this happens could be extremely long and wouldn’t provide us with any critical information (for now, we may want to change how we return the PLACE of the intersection)
+
 Pseudocode
 ```
 bool overlap(bbox a, bbox b) //if 
   return (a.right < b.left || a.left > b.right || a.top < b.bottom || a.bottom > b.top)
 
-coord* findIntersection (Node a, Node b) //top level function call will return true if any leaf 
- 					nodes overlap
-  if nodes overlap
+coord* findIntersection (Node a, Node b) //top level function call will return true if any leaf nodes overlap
+ if overlaps(a.bbox, b.bbox)
     if they are both leaves
-          call BLACKBOX, return coords
+          call BLACKBOX, returns bbox or empty list depending on if there is overlap
     if both have children
-         if any calls to findIntersection(one's children, other's children) return a list of coord
-            append all valid coords together and return list
+         if any calls to findIntersection(one's children, other's children) return a list of bbox
+            append all valid returned bboxes together and return list
     if only one has children
         if any calls to findIntersection(one's children, other node) return a list of valid bbox
-            append all valid coords together and return list
+            append all valid bbox together and return list
   else no overlap so return []
+
 
 ```
 Close-to-real code
 ```C++
-
+******** INCOMPLETE
 bool findIntersection(Node a, Node b){
   if(isLeaf(a) && isLeaf(b)){
     if (overlaps(a.bbox, b.bbox)){
@@ -100,7 +101,7 @@ bool findIntersection(Node a, Node b){
     else return false;
   }
   if(overlaps(a.bbox, b.bbox){
-    if(isLeaf(a), isLeaf(b))
+    if(!isLeaf(a), !isLeaf(b))
         return( findIntersection(a.right, b.right) ||
                 findIntersection(a.left, b.right ) ||
                 findIntersection(a.right, b.left ) ||
@@ -116,7 +117,10 @@ bool findIntersection(Node a, Node b){
 ```
   
 ## Boundary Intersection
-If the boundaries of A and B intersect, the leaf nodes of their bounding volume hierachies which contain the boundary within them intersect. The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. This will be helpful for closest distance and tangency [later in teh document](#tangency). When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes where they contain boundaries. 
+If the boundaries of A and B intersect, there exist boundary-containing leaf nodes that overlap. 
+The bounding boxes with only "inside" area don't tell us anything about boundary behavior. My proposed solution to this is to "flag" leaf nodes with boundaries. This will be helpful for closest distance and tangency later in the document. When we are checking for overlap, we use the same findIntersection function above except we only return true on leaf nodes that are flagged as containing boundary points. 
+*** Note: edge case for when line intersects when passing directly through a corner or along a boxes edge. Need to make sure the way we count a box as having a boundary would solve for intersection in these cases. 
+
 Pseudocode
 ```
 createBBoxNew(grid, xmin, ymin, xmax, ymax)
@@ -139,29 +143,37 @@ bvhCreatorNew(node, grid, position of bbox, iter)
   else if iter == odd // Y split
     set current node as not a leaf node
     call bvhCreator on the right (bottom) and left (top), dividing the bbox in half along Y axis
-    
 
-findIntersectionNew (Node a, Node b) //top level function call will return true if any leaf nodes overlap
-  if they are both leaves AND leaf nodes are boundary containing cells
-      check overlap, if it works return true
-  if nodes overlap
-    if check if both have children
-         // return true if any of the children findOverlap calls returns true:
-         return findOverlap(one's children, other's children)
+
+coord* findIntersectionNew (Node a, Node b) //top level function call will return true if any leaf nodes overlap
+  if overlaps(a.bbox, b.bbox) AND a and b are boudary containing nodes
+    if they are both leaves
+          call BLACKBOX, return coords
+    if both have children
+         if any calls to findIntersectionNew(one's children, other's children) return a list of coord
+            append all valid coords together and return list
     if only one has children
-        // return true if any of the children findOverlap calls returns true:
-       return findOverlap(one's children, other node)
-  if dont overlap, return false
+        if any calls to findIntersectionNew(one's children, other node) return a list of valid coord
+            append all valid coords together and return list
+  else no overlap so return []
+  
 ```
-
 ## Containment
 Here I present three possible solutions. Part 1 is about a method of BVH traversal I came up with for checking containment.
 The second and third parts are the polygon containment test and the level set containment tests described in Keenan's blog post. 
 ## Part 1: Negative space BVH traversal
 This is my proposed new solution to the containments problem. It requires an additional data structure, but would not require computing the level set, just having a discrete representation of the shape's boundary. The rationale for this method is that if shape A is NOT contained in shape B, there will be a part of A that overlaps with the negative space of B. 
-In this solution, I create a BVH surrounding the whitespace of the outermost bounding box. The traversal will be the same as findIntersection for [Area Intersection](#area-intersection) except the BVH (Node b) that is passed in will be the whitespace tree of B. A true return value means part of A is possibly not contained in B (I say possibly as the lowest leaf node contains test is a black box for now). The good thing about this method is that we can use similar BVH traversal as area and boundary intersection and the black box solution for two overlapping leaf nodes will be similar. 
+In this solution:
+First I check if bboxes contain each other, if not I force the boxes to move toward one another 
+Once outermost shape’s bbox contains the inner shapes’s bbox, I create a BVH surrounding the whitespace of the outermost bounding box. (see pseudocode below)
+The same function used is findIntersection for Area Intersection with the exception that the BVH (Node b) that is passed in will be the whitespace tree of B. 
+A true return value means part of A is possibly not contained in B, and the BLACKBOX solution will tell us for sure. The good thing about this method is that we can use similar BVH traversal as area and boundary intersection and the black box solution for two overlapping leaf nodes will be similar.
 
 ```
+enforceBBoxContainment(bbox a, bbox b)
+  if !contains(a, b)
+      push b toward a's center //in the optimizer this is returned as a distance function which is then minimized
+
 createBBoxNegatives(grid, xmin, ymin, xmax, ymax)
 loop over grid between mins and maxes
   find new max and min x and y coords for POSITIVE numbers // makes a bounding box tight around the whitespace around
@@ -242,16 +254,14 @@ containsLevelSet(grid, rows, cols, outershape){
 }
 ```
 If we want to move a shape inside another shape if part of the first shape's area is not contained, we could use [fast sweeping or fast marching](http://brickisland.net/diagrams/2018/06/17/methods-to-find-distance-between-arbitrary-shapes-in-penrose-a-comparison-of-fast-methods-for-solving-the-eikonal-equation/). 
-There is another way of moving objects closer that could be considered slightly hacky, but does the job well enough
-*** DO i include this if it isn't about BVH?
 
 ## Tangency
-See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. Closest distance gives us a value for how close two objects are regardless of position but if we use these two functions in tandem I can see issues with enforcing tangency. Because closest distance returns more than one bboxes it could be expensive finding the closest point and if you have multiple equidistant points, which direction do you move an object toward? We can also force objects to overlap using [area intersection](#area-intersection) and then move the shapes to only be touching in one spot and rotated so the slopes at the points that are touching are equal. Without the black box method for how we will solve tangency between two leaf nodes I don't know which solution is best.
+See [Closest Distance](#closest-distance) for background. To determine tangency, we will need to delve deeper than just a BVH solution, as tangency relies on boundaries touching at one point and the slope of both boundaries being the same at that point. The slope of the lines is something that can't be exactly calculated using BVH's but we have the building blocks to tell if the points are touching. Closest distance gives us a value for how close two objects are regardless of position but if we use these two functions in tandem I can see issues with enforcing tangency. Because closest distance returns more than one bboxes it could be expensive finding the closest point and if you have multiple equidistant points, which direction do you move an object toward? We can also force objects to overlap using [area intersection](#area-intersection) and then move the shapes to only be touching in one spot and rotated so the slopes at the points that are touching are equal. Without the black box method for how we will solve tangency between two leaf nodes I don't know which solution is best. This question needs more time to find an adequate answer.
 
 ```
 findTangency (a, b)
   if they intersect 
-    intersect place = intersects(a.bvh, b.bvh) 
+    intersect places = intersects(a.bvh, b.bvh) 
     call black box tangency solver between the overlapping nodes
     
 // What to do when there are multiple overlapping leaf nodes? Choose one and find a local minima? 
@@ -259,12 +269,16 @@ findTangency (a, b)
 
 
 ## Closest Distance
-First, I'll explain the naive method I came up with. I'm not sure how inefficient it is. It reduces the number of leaf nodes we are looking at but it doesn't reduce the problem to a two-leaf-node-black-box solution. 
-In this method, we compare the children of both objects with the goal of finding two overlapping **boundary-containing** leaf nodes (possible distance 0) or the two closest **boundary-containing** leaf nodes (distance within range of max and min distance between squares). The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. PICTURE. As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. PICTURE.
-We know the maximum possible distance from a point to a bbox is the distance to the 2nd closest corner: PICTURE
-We can utilize this to find the maximum distance between two boxes by comparing distance from corners: PICTURE
-If the minimum distance of one child is greater than the max distance of another child, we ignore the first child because it isn't possible for the closest point to be in that bbox. 
+FFirst, I'll explain the naive method I came up with. I'm not sure how inefficient it is. It reduces the number of leaf nodes we are looking at to a small subset of closest leaf nodes and then calls the blackbox solution on all valid pairs. In this method, we compare the children of both objects with two possible goals:
+- Find the two leaf nodes where boundary containing leafs overlap
+BLACKBOX can solve for this case to see if distance == 0 or less, or if boundaries are just very close
+- Find the closest boundary containing leaves The rationale here is that the closest few leaf nodes between shapes will contain the closest point and the smallest distance. I don't say only one leaf because the bbox is just an estimation, so the closest box might not have the closest point. 
+As we iterate through the trees, if a bbox of a child's minimum possible distance to our shape is greater than the maximum possible distance of another child's bbox, the closest point cannot be in the first child. 
+We know the maximum possible distance from a point to a bbox is the distance to the 2nd closest corner: 
+We can utilize this to find the maximum distance between two boxes by comparing distance from corners: 
+If the minimum distance of one child is greater than the max distance of another child, we ignore the first child because it isn't possible for the closest point to be in that bbox.
 
+We iterate through the tree, trimming
 Pseudocode
 ```
 findClosestBBoxes(node a, node b){
