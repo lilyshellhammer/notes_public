@@ -7,7 +7,7 @@ boundaryA, boundaryB - boundaries
 | . | : R^2 -> R; (x1, x2) |-> sqrt(x_1^2, x_2^2)
 
 
-POINT-SHAPE DISTANCE 
+## POINT-SHAPE DISTANCE 
 
 d_a(x) = min (y in boundary A) |x-y|
 d_a, s_a : R^2 -> R
@@ -16,7 +16,7 @@ s_a(x) = d_a(x) { -1, x in A
                   1, x not in A or boudnary A}
                   
 
-SHAPE-SHAPE DISTANCES
+## SHAPE-SHAPE DISTANCES
 
 [little d]
 This is the shortest distance between polygons. It is the distance between the point on A that is closest to B and the point on B that is closest to A. This distance is unsigned. It is symmmetrical, meaning d(A,B) is the same as d(B,A). 
@@ -34,7 +34,7 @@ This is the maximum signed distance between polygons. It is the point on A whose
 
 [max max]???
 
-Claims
+### Claims
 When B is contained in A
   small s = Big d
   big s = small d
