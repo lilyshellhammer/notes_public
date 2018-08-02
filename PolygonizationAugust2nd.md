@@ -18,7 +18,8 @@ s_a(x) = d_a(x) { -1, x in A
 
 ## SHAPE-SHAPE DISTANCES
 
-[little d]
+$d\textsubscript{A,B} \coloneqq \min\limits_{p \in \partial B} d\textsubscript{A} (p)$
+	
 This is the shortest distance between polygons. It is the distance between the point on A that is closest to B and the point on B that is closest to A. This distance is unsigned. It is symmmetrical, meaning d(A,B) is the same as d(B,A). 
 
 PROOF for symmetry
